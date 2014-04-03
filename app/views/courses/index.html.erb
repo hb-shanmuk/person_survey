@@ -1,0 +1,36 @@
+<h1>Listing courses</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+
+    <%= form_tag courses_path,:method=>:post do %>
+  <tbody>
+      <% @courses.each do |course| %>
+        <tr>        
+          <td><%=course.category%></td>
+          <td colsspan="4"><%=course.question%></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td><%= radio_button_tag "answer[#{course.id}]",1 %>1</td>
+          <td><%= radio_button_tag "answer[#{course.id}]",2 %>2</td>
+          <td><%= radio_button_tag "answer[#{course.id}]",3 %>3</td>
+          <td><%= radio_button_tag "answer[#{course.id}]",4 %>4</td>
+          <td><%= radio_button_tag "answer[#{course.id}]",5 %>5</td>
+        </tr>
+        <%= hidden_field_tag :step, params[:step]%>
+      <% end %>      
+  </tbody>
+</table>
+  <%= submit_tag 'Next'%>
+<% end %>
+
+<br>
+
