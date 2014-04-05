@@ -4,30 +4,31 @@ class CoursesController < ApplicationController
   # GET /courses
   # GET /courses.json
   def index
-    if params[:step].present? && [3,4].include?(params[:step].to_i)
+    if params[:step].present? && [3,4,5].include?(params[:step].to_i)
       answers = Answer.joins("INNER JOIN questions ON questions.id = answers.question_id").where("answers.user_id = 1").select("questions.category,avg(answers.answer) as answer_avg").order("answer_avg").group("questions.category").limit(3)
-
-      if answers.present?        
-        @courses = Question.select("id, category, title AS question").where("id NOT IN (?) AND category = ?",Answer.select("question_id").where("user_id = 1").map(&:question_id),answers.first.category).order("RAND()").limit(2)
-        category_ids = answers.map(&:category)
-        category_ids = category_ids.delete_at(0)
-        @courses += Question.select("id, category, (SELECT title FROM questions WHERE category = questions.category GROUP BY id ORDER BY RAND( ) LIMIT 1) AS question").where("id NOT IN (?) AND category IN (?)",Answer.select("question_id").where("user_id = 1").map(&:question_id),category_ids).group("category")
-        
+      if [3,4].include?(params[:step].to_i)        
+        if answers.present? 
+          @courses = Question.select("id, category, concat(id,'_',title) AS question").where("id NOT IN (?) AND category = ?",Answer.select("question_id").where("user_id = 1").map(&:question_id),answers.first.category).order("RAND()").limit(2)
+          category_ids = answers.map(&:category)
+          category_ids.delete_at(0)
+          @courses += Question.select("id, category, (SELECT concat(id,'_',title) FROM questions WHERE category = questions.category GROUP BY id ORDER BY RAND( ) LIMIT 1) AS question").where("id NOT IN (?) AND category IN (?)",Answer.select("question_id").where("user_id = 1").map(&:question_id),category_ids).group("category")        
+        end        
+      else
+        redirect_to course_path(1,:category=>answers.first.category)
       end
-      @courses = Question.select("id, category, (SELECT title FROM questions WHERE category = questions.category GROUP BY id ORDER BY RAND( ) LIMIT 1) AS question").where("id NOT IN (?) AND category IN (?)",Answer.select("question_id").where("user_id = 1").map(&:question_id),answers.keys).group("category")    
-
-
     elsif params[:step].present?  && params[:step].to_i == 2
-      @courses = Question.select("id, category, (SELECT title FROM questions WHERE category = questions.category GROUP BY id ORDER BY RAND( ) LIMIT 1) AS question").where("id NOT IN (?)",Answer.select("question_id").where("user_id = 1").map(&:question_id)).group("category")    
+      @courses = Question.select("id, category, (SELECT concat(id,'_',title) FROM questions WHERE category = questions.category GROUP BY id ORDER BY RAND( ) LIMIT 1) AS question").where("id NOT IN (?)",Answer.select("question_id").where("user_id = 1").map(&:question_id)).group("category")    
     else
       params[:step] ||= 1
-      @courses = Question.select("id, category, (SELECT title FROM questions WHERE category = questions.category GROUP BY id ORDER BY RAND( ) LIMIT 1) AS question").group("category")
+      @courses = Question.select("category, (SELECT concat(id,'_',title) FROM questions WHERE category = questions.category GROUP BY id ORDER BY RAND( ) LIMIT 1) AS question").group("category")
+      # render :text => 
     end
   end
 
   # GET /courses/1
   # GET /courses/1.json
   def show
+    render :text => params[:category].inspect and return false
   end
 
   # GET /courses/new
@@ -41,13 +42,22 @@ class CoursesController < ApplicationController
 
   # POST /courses
   # POST /courses.json
-  def create
-    #render :text => params.inspect and return false
-    if params[:answer].present? and params[:answer].keys.length==6      
-      params[:answer].each do |key,value|
-        Answer.create(:question_id=>key,:answer=>value,:user_id=>1)
-      end      
-      redirect_to courses_path(:step=>params[:step].to_i+1)
+  def create    
+    if params[:answer].present?
+      if params[:answer].keys.length== 6 && [1,2].include?(params[:step].to_i)      
+        # render :text => params.inspect and return false
+        params[:answer].each do |key,value|
+          Answer.create(:question_id=>key,:answer=>value,:user_id=>1)
+        end      
+        redirect_to courses_path(:step=>params[:step].to_i+1)
+      elsif params[:answer].keys.length==4 && [3,4].include?(params[:step].to_i)
+        params[:answer].each do |key,value|
+          Answer.create(:question_id=>key,:answer=>value,:user_id=>1)
+        end      
+        redirect_to courses_path(:step=>params[:step].to_i+1)
+      else
+         redirect_to courses_path         
+      end        
     else
       redirect_to courses_path      
     end
